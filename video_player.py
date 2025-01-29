@@ -125,7 +125,7 @@ class VideoPlayer:
                     frame = self.buffer.get()
                     self._display_frame(frame)
                     self.current_frame = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
-                    self.seek_bar.value = self.current_frame
+                    self.seek_bar.value = min(self.current_frame, self.seek_bar.max)
                     self.seek_bar.update()
 
                     sleep_time = max(
@@ -164,6 +164,12 @@ class VideoPlayer:
                     if sleep_time > 0:
                         time.sleep(sleep_time)
                     last_time = time.time()
+                    if self.proceed_playlist:
+                        print("Fim do vídeo.")
+                        print(
+                            f"{self.current_frame}/{self.total_frames}/{self.seek_bar.value}"
+                        )
+
                 else:
                     time.sleep(0.001)  # Reduz o tempo de espera para buscar mais frames
 
