@@ -28,6 +28,7 @@ class VideoPlayer:
         self.paused_15 = False
         self.paused_30 = False
         self.paused_45 = False
+        self.skiped = False
 
     def control_pause(self, event=None):
         if self.playing:
@@ -165,13 +166,17 @@ class VideoPlayer:
                         time.sleep(sleep_time)
                     last_time = time.time()
                     if self.proceed_playlist:
-                        print("Fim do vídeo.")
-                        print(
-                            f"{self.current_frame}/{self.total_frames}/{self.seek_bar.value}"
-                        )
-
+                        print(f" {self.current_frame}/{self.seek_bar.max}")
+                        maxvideo = self.seek_bar.max - self.seek_bar.value
+                        print(maxvideo)
+                        if maxvideo < 20:
+                            if self.skiped == False:
+                                self.skiped = True
+                                self.pause()
+                                time.sleep(0.5)
+                                self.skip_video()
                 else:
-                    time.sleep(0.001)  # Reduz o tempo de espera para buscar mais frames
+                    time.sleep(0.001)
 
         threading.Thread(target=playback_thread, daemon=True).start()
 
@@ -315,5 +320,6 @@ class VideoPlayer:
                 print(
                     "Você já está no primeiro vídeo da playlist."
                 )  # Mensagem para o primeiro vídeo
+            self.skiped = False
         except ValueError:
             print("Current video not found in the playlist.")
