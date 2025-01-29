@@ -5,8 +5,9 @@ import time
 import cv2
 import flet as ft
 
+
 class VideoPlayer:
-    def __init__(self, page, image_widget, seek_bar, loading_overlay,playlist):
+    def __init__(self, page, image_widget, seek_bar, loading_overlay, playlist):
         self.page = page
         self.image_widget = image_widget
         self.seek_bar = seek_bar
@@ -22,23 +23,29 @@ class VideoPlayer:
         self.reader_thread = None
         self.playlist = playlist
         self.video_path = None
-        
+        self.proceed_playlist = False
+
         self.paused_15 = False
         self.paused_30 = False
         self.paused_45 = False
-    
 
-    def control_pause(self, event=None):    
+    def control_pause(self, event=None):
         if self.playing:
             self.pause()
         else:
             self.play()
 
+    def control_playlist(self, event=None):
+        if self.proceed_playlist:
+            self.proceed_playlist = False
+        else:
+            self.proceed_playlist = True
+
     def show_loading(self, message="Carregando..."):
         self.loading_overlay.content = ft.Container(
             content=ft.Column(
                 [
-                    #ft.Text(message, size=20, weight=ft.FontWeight.BOLD, color="white"),
+                    # ft.Text(message, size=20, weight=ft.FontWeight.BOLD, color="white"),
                     ft.ProgressRing(),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
@@ -53,7 +60,6 @@ class VideoPlayer:
     def hide_loading(self):
         self.page.overlay.remove(self.loading_overlay)
         self.page.update()
-
 
     def load_video(self, video_path):
         self.show_loading("Carregando vídeo...")
@@ -98,8 +104,6 @@ class VideoPlayer:
         self.reader_thread = threading.Thread(target=buffer_frames, daemon=True)
         self.reader_thread.start()
 
-
-
     def play(self, event=None):
         if not self.cap or not self.cap.isOpened():
             print("Erro: VideoCapture não está aberto.")
@@ -123,23 +127,36 @@ class VideoPlayer:
                     self.current_frame = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
                     self.seek_bar.value = self.current_frame
                     self.seek_bar.update()
-                    
 
-                    sleep_time = max(0, (frame_time / self.speed_factor) - (time.time() - last_time))
+                    sleep_time = max(
+                        0, (frame_time / self.speed_factor) - (time.time() - last_time)
+                    )
                     elapsed_time_seconds = self.current_frame / self.fps
 
-                    if 900 <= elapsed_time_seconds < 910 and not self.paused_15:  # 15 minutos
+                    if (
+                        900 <= elapsed_time_seconds < 910 and not self.paused_15
+                    ):  # 15 minutos
                         self.paused_15 = True
                         self.pause()
-                        self.show_pause_message("Pausado automaticamente, Lembre-se de salvar o progresso.")
-                    elif 1800 <= elapsed_time_seconds < 1810 and not self.paused_30:  # 30 minutos
+                        self.show_pause_message(
+                            "Pausado automaticamente, Lembre-se de salvar o progresso."
+                        )
+                    elif (
+                        1800 <= elapsed_time_seconds < 1810 and not self.paused_30
+                    ):  # 30 minutos
                         self.paused_30 = True
                         self.pause()
-                        self.show_pause_message("Pausado automaticamente, Lembre-se de salvar o progresso.")
-                    elif 2700 <= elapsed_time_seconds < 2710 and not self.paused_45:  # 45 minutos
+                        self.show_pause_message(
+                            "Pausado automaticamente, Lembre-se de salvar o progresso."
+                        )
+                    elif (
+                        2700 <= elapsed_time_seconds < 2710 and not self.paused_45
+                    ):  # 45 minutos
                         self.paused_45 = True
                         self.pause()
-                        self.show_pause_message("Pausado automaticamente, Lembre-se de salvar o progresso.")
+                        self.show_pause_message(
+                            "Pausado automaticamente, Lembre-se de salvar o progresso."
+                        )
                     elif elapsed_time_seconds >= 2750 and self.paused_45:
                         self.paused_45 = False
                         self.paused_30 = False
@@ -159,14 +176,14 @@ class VideoPlayer:
                 size=16,
                 weight=ft.FontWeight.BOLD,
                 color="white",
-                text_align=ft.TextAlign.CENTER
-                ),
+                text_align=ft.TextAlign.CENTER,
+            ),
             bgcolor="orange",
-            duration=3500
+            duration=3500,
         )
         self.page.snack_bar.open = True
         self.page.update()
-        
+
     def pause(self, event=None):
         self.playing = False
         if self.reader_thread and self.reader_thread.is_alive():
@@ -176,7 +193,7 @@ class VideoPlayer:
         with self.buffer.mutex:
             self.buffer.queue.clear()
 
-    def set_speed(self, speed_factor , event=None):
+    def set_speed(self, speed_factor, event=None):
         self.speed_factor = max(1, min(speed_factor, 16))
         print(f"Velocidade ajustada para: {self.speed_factor}x")
 
@@ -190,23 +207,26 @@ class VideoPlayer:
         self.show_loading()
         try:
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame_position)
-            self.current_frame = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))  # Atualiza a posição real
+            self.current_frame = int(
+                self.cap.get(cv2.CAP_PROP_POS_FRAMES)
+            )  # Atualiza a posição real
             self.seek_bar.value = self.current_frame
             self.seek_bar.update()
-            
+
             # Força a exibição do frame atual
             ret, frame = self.cap.read()
             if ret:
                 self._display_frame(frame)
             else:
-                print(f"Erro ao capturar o frame no seek para a posição {frame_position}")
+                print(
+                    f"Erro ao capturar o frame no seek para a posição {frame_position}"
+                )
         except Exception as e:
             print(f"Erro ao realizar seek: {e}")
         finally:
             if starting:
                 self.play()
             self.hide_loading()
-
 
     def start_seek_interaction(self):
         self.seek_interacting = True
@@ -220,25 +240,28 @@ class VideoPlayer:
     def _display_frame(self, frame):
         try:
             frame = cv2.resize(frame, (1280, 720), interpolation=cv2.INTER_LINEAR)
-            _, encoded_image = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 65])
+            _, encoded_image = cv2.imencode(
+                ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 65]
+            )
             base64_image = base64.b64encode(encoded_image).decode()
             self.image_widget.src_base64 = base64_image
             self.image_widget.update()
         except Exception as e:
             print(f"Erro ao exibir o frame: {e}")
-            
+
     def starting_video(self, video_path):
         self.load_video(video_path)
-        time.sleep(0.1) # correcao de bug
+        time.sleep(0.1)  # correcao de bug
         self.play()
-        time.sleep(0.1) # correcao de bug
+        time.sleep(0.1)  # correcao de bug
         self.pause()
-        
+
     def avance_frames(self, frames):
         self.seek(int(self.current_frame + frames))
-            
+
     def retroceder_frames(self, frames):
-        if int(self.current_frame - frames) <= 0: return
+        if int(self.current_frame - frames) <= 0:
+            return
         self.seek(max(0, int(self.current_frame - frames)))
 
     def skip_video(self, e=None):
@@ -248,7 +271,7 @@ class VideoPlayer:
         try:
             # Obtém o índice atual do vídeo
             current_index = self.playlist.index(self.video_path)
-            
+
             # Calcula o próximo índice
             next_index = current_index + 1
 
@@ -256,9 +279,9 @@ class VideoPlayer:
             if next_index < len(self.playlist):
                 self.load_video(self.playlist[next_index])  # Carregar o próximo vídeo
                 self.play()
-                time.sleep(0.1) # correcao de bug
+                time.sleep(0.1)  # correcao de bug
                 self.pause()
-            else:        
+            else:
                 print(" Vocé chegou ao fim da playlist.")
         except ValueError:
             print("Current video not found in the playlist.")
@@ -270,17 +293,21 @@ class VideoPlayer:
         try:
             # Obtém o índice atual do vídeo
             current_index = self.playlist.index(self.video_path)
-            
+
             # Calcula o índice do vídeo anterior
             previous_index = current_index - 1
 
             # Verifica se o índice do vídeo anterior é válido
             if previous_index >= 0:
-                self.load_video(self.playlist[previous_index])  # Carregar o vídeo anterior
+                self.load_video(
+                    self.playlist[previous_index]
+                )  # Carregar o vídeo anterior
                 self.play()
-                time.sleep(0.1) # correcao de bug
+                time.sleep(0.1)  # correcao de bug
                 self.pause()
             else:
-                print("Você já está no primeiro vídeo da playlist.")  # Mensagem para o primeiro vídeo
+                print(
+                    "Você já está no primeiro vídeo da playlist."
+                )  # Mensagem para o primeiro vídeo
         except ValueError:
             print("Current video not found in the playlist.")
