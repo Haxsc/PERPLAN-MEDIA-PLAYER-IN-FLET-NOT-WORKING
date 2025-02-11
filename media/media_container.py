@@ -1,6 +1,7 @@
 import flet as ft
 
-def create_container_media(media, controls, page):
+
+def create_container_media(media, controls, page, playlist, video_path):
     return ft.Container(
         content=ft.Column(
             controls=[media, controls],

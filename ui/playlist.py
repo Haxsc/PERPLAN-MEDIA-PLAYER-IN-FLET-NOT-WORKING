@@ -1,5 +1,6 @@
 import flet as ft
 
+
 def create_playlist_dialog(page, playlist, video_path):
     """Cria o diálogo da lista de reprodução."""
 
@@ -137,7 +138,13 @@ def create_playlist_dialog(page, playlist, video_path):
     def open_file_picker(e):
         """Abre o file picker para selecionar arquivos e adiciona à lista."""
         file_picker.pick_files(
-            allowed_extensions=["mp4", "avi", "mkv", "mov", "dav"],  # Extensões permitidas
+            allowed_extensions=[
+                "mp4",
+                "avi",
+                "mkv",
+                "mov",
+                "dav",
+            ],  # Extensões permitidas
             allow_multiple=True,  # Permitir múltiplos arquivos
         )
 

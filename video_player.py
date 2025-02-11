@@ -7,7 +7,9 @@ import flet as ft
 
 
 class VideoPlayer:
-    def __init__(self, page, image_widget, seek_bar, loading_overlay, playlist):
+    def __init__(
+        self, page, image_widget, seek_bar, loading_overlay, playlist, play_button
+    ):
         self.page = page
         self.image_widget = image_widget
         self.seek_bar = seek_bar
@@ -18,10 +20,11 @@ class VideoPlayer:
         self.total_frames = 0
         self.fps = 0
         self.speed_factor = 1
-        self.buffer = queue.Queue(maxsize=1)  # Buffer maior
+        self.buffer = queue.Queue(maxsize=10)  # Buffer maior
         self.seek_interacting = False
         self.reader_thread = None
         self.playlist = playlist
+        self.play_button = play_button
         self.video_path = None
         self.proceed_playlist = False
 
@@ -88,6 +91,9 @@ class VideoPlayer:
     def start_buffer_thread(self):
         def buffer_frames():
             while self.playing and self.cap.isOpened():
+                print(
+                    f"Buffer Size: {self.buffer.qsize()} / {self.buffer.maxsize}"
+                )  # Exibe o número de frames no buffer
                 if not self.buffer.full():
                     ret, frame = self.cap.read()
                     if not ret:
@@ -115,6 +121,11 @@ class VideoPlayer:
             return
 
         self.playing = True
+        self.play_button.content = ft.Icon(
+            name=ft.Icons.PAUSE,
+            color="#505050",
+        )
+        self.play_button.update()
         self.start_buffer_thread()
 
         def playback_thread():
@@ -135,7 +146,7 @@ class VideoPlayer:
                     elapsed_time_seconds = self.current_frame / self.fps
 
                     if (
-                        900 <= elapsed_time_seconds < 910 and not self.paused_15
+                        890 <= elapsed_time_seconds < 900 and not self.paused_15
                     ):  # 15 minutos
                         self.paused_15 = True
                         self.pause()
@@ -143,7 +154,7 @@ class VideoPlayer:
                             "Pausado automaticamente, Lembre-se de salvar o progresso."
                         )
                     elif (
-                        1800 <= elapsed_time_seconds < 1810 and not self.paused_30
+                        1790 <= elapsed_time_seconds < 1800 and not self.paused_30
                     ):  # 30 minutos
                         self.paused_30 = True
                         self.pause()
@@ -151,7 +162,7 @@ class VideoPlayer:
                             "Pausado automaticamente, Lembre-se de salvar o progresso."
                         )
                     elif (
-                        2700 <= elapsed_time_seconds < 2710 and not self.paused_45
+                        2690 <= elapsed_time_seconds < 2700 and not self.paused_45
                     ):  # 45 minutos
                         self.paused_45 = True
                         self.pause()
@@ -169,7 +180,8 @@ class VideoPlayer:
                         print(f" {self.current_frame}/{self.seek_bar.max}")
                         maxvideo = self.seek_bar.max - self.seek_bar.value
                         print(maxvideo)
-                        if maxvideo < 20:
+                        if maxvideo < 40:
+                            print("PULANDO DE VIDEO ...")
                             if self.skiped == False:
                                 self.skiped = True
                                 self.pause()
@@ -197,12 +209,17 @@ class VideoPlayer:
 
     def pause(self, event=None):
         self.playing = False
+        self.play_button.content = ft.Icon(
+            name=ft.Icons.PLAY_ARROW,
+            color="#505050",
+        )
+        self.play_button.update()
         if self.reader_thread and self.reader_thread.is_alive():
             self.reader_thread.join()
 
         # Resetar o buffer
-        with self.buffer.mutex:
-            self.buffer.queue.clear()
+        # with self.buffer.mutex:
+        #     self.buffer.queue.clear()
 
     def set_speed(self, speed_factor, event=None):
         self.speed_factor = max(1, min(speed_factor, 16))
@@ -224,7 +241,14 @@ class VideoPlayer:
             self.seek_bar.value = self.current_frame
             self.seek_bar.update()
 
-            # Força a exibição do frame atual
+            temp_buffer = []
+
+            while not self.buffer.empty():
+                temp_buffer.append(self.buffer.get())
+
+            if temp_buffer:
+                first_frame = temp_buffer[0]  # Primeiro frame do buffer
+                print(first_frame)
             ret, frame = self.cap.read()
             if ret:
                 self._display_frame(frame)
@@ -268,6 +292,9 @@ class VideoPlayer:
         self.pause()
 
     def avance_frames(self, frames):
+        print(
+            f"Buffer Size: {self.buffer.qsize()} / {self.buffer.maxsize}"
+        )  # Exibe o número de frames no buffer
         self.seek(int(self.current_frame + frames))
 
     def retroceder_frames(self, frames):
@@ -279,6 +306,7 @@ class VideoPlayer:
         self.paused_45 = False
         self.paused_30 = False
         self.paused_15 = False
+
         try:
             # Obtém o índice atual do vídeo
             current_index = self.playlist.index(self.video_path)
@@ -287,6 +315,7 @@ class VideoPlayer:
             next_index = current_index + 1
 
             # Verifica se o próximo índice está dentro do intervalo
+            self.skiped = False
             if next_index < len(self.playlist):
                 self.load_video(self.playlist[next_index])  # Carregar o próximo vídeo
                 self.play()

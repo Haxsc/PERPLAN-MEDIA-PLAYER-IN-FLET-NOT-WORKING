@@ -29,12 +29,13 @@ def main(page: ft.Page):
     page.scroll = "none"
     page.window.maximized = True
     playlist = []
-
     ### Block Keys
     check_focus(page)
 
     ### Video Player
-    video_player = VideoPlayer(page, image_widget, None, loading_overlay, playlist)
+    video_player = VideoPlayer(
+        page, image_widget, None, loading_overlay, playlist, None
+    )
     seek_bar = create_seek_bar(video_player)
     video_player.seek_bar = seek_bar
 
@@ -42,6 +43,7 @@ def main(page: ft.Page):
     controls_main = create_controls(video_player, seek_bar)
     controls = controls_main["controls"]
     play_button = controls_main["play_button"]
+    video_player.play_button = play_button
 
     ### MENU BAR
     def open_playlist(e):
@@ -84,11 +86,11 @@ def main(page: ft.Page):
         video_player, image_widget, controls, menu_bar, playlist, page
     )
     media = create_media_container(button_file_picker, image_widget, page)
-    container_media = create_container_media(media, controls, page)
-
+    container_media = create_container_media(
+        media, controls, page, playlist, video_player.video_path
+    )
     container_contador = ft.Container(
         content=ft.Text("Container Contador", size=18, color="white"),
-        bgcolor="green",
         width=page.width * 0.20 - 2,
         alignment=ft.alignment.center,
     )
@@ -96,6 +98,71 @@ def main(page: ft.Page):
     vertical_divider = create_vertical_divider(
         container_media, container_contador, image_widget, page
     )
+
+    ### Title hover
+    def show_draggable_cursor(e: ft.HoverEvent):
+        # Verificar se o título já existe no overlay
+        existing_title = next(
+            (item for item in page.overlay if isinstance(item, ft.Stack)), None
+        )
+
+        # Atualizar ou criar o título
+        if existing_title is None:
+            # Criar o título no overlay
+            title = ft.Stack(visible=False)
+            page.overlay.append(title)
+        else:
+            title = existing_title  # Reutilizar o título já existente
+
+        text_size = 30
+        if page.width * 0.02 < text_size:
+            text_size = page.width * 0.02
+
+        # Atualizar o conteúdo do título
+        title.controls = [
+            ft.Text(
+                spans=[
+                    ft.TextSpan(
+                        video_player.video_path,
+                        ft.TextStyle(
+                            size=text_size,
+                            weight=ft.FontWeight.BOLD,
+                            foreground=ft.Paint(
+                                color=ft.Colors.BLACK,
+                                stroke_width=6,
+                                stroke_join=ft.StrokeJoin.ROUND,
+                                style=ft.PaintingStyle.STROKE,
+                            ),
+                        ),
+                    ),
+                ],
+            ),
+            ft.Text(
+                spans=[
+                    ft.TextSpan(
+                        video_player.video_path,
+                        ft.TextStyle(
+                            size=text_size,
+                            weight=ft.FontWeight.BOLD,
+                            color=ft.Colors.GREY_300,
+                        ),
+                    ),
+                ],
+            ),
+        ]
+
+        # Atualizar largura e posição com os valores atuais
+        title.width = page.width * 0.80
+        title.alignment = ft.alignment.center
+        title.top = page.window.height * 0.07
+
+        # Atualizar visibilidade
+        title.visible = e.data == "true"
+
+        # Atualizar a página para refletir as mudanças
+        page.update()
+
+    container_media.on_hover = lambda e: show_draggable_cursor(e)
 
     page.add(
         menu_bar,

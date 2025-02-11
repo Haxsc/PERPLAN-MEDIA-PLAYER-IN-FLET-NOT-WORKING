@@ -2,7 +2,6 @@ import keyboard
 import pygetwindow as gw
 import win32gui
 import time
-from ui.play_button import control_pause_button
 
 binds_enabled = True
 teclas_bloqueadas = set()
@@ -61,7 +60,7 @@ def is_window_in_focus(titulo_janela):
 
 def play_pause_action(video_player, play_button):
     if binds_enabled:
-        control_pause_button(None, video_player, play_button)
+        video_player.control_pause()
 
 
 def avance_frames(video_player, frames):
