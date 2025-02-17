@@ -100,25 +100,33 @@ def main(page: ft.Page):
     )
 
     ### Title hover
-    def show_draggable_cursor(e: ft.HoverEvent):
-        # Verificar se o título já existe no overlay
+    def update_overlay():
+        """Atualiza o overlay com o título e o ícone de play/pausa."""
         existing_title = next(
             (item for item in page.overlay if isinstance(item, ft.Stack)), None
         )
 
-        # Atualizar ou criar o título
         if existing_title is None:
-            # Criar o título no overlay
-            title = ft.Stack(visible=False)
+            title = ft.Stack(
+                visible=False,
+                disabled=True,
+                opacity=0.0,
+                animate_opacity=ft.animation.Animation(
+                    duration=500,
+                    curve=ft.AnimationCurve.EASE_IN_OUT,
+                ),
+                alignment=ft.alignment.center,
+                left=10,
+            )
             page.overlay.append(title)
         else:
-            title = existing_title  # Reutilizar o título já existente
+            title = existing_title
 
         text_size = 30
         if page.width * 0.02 < text_size:
             text_size = page.width * 0.02
 
-        # Atualizar o conteúdo do título
+        # Atualizar o conteúdo do título e do ícone de play/pausa
         title.controls = [
             ft.Text(
                 spans=[
@@ -136,6 +144,7 @@ def main(page: ft.Page):
                         ),
                     ),
                 ],
+                top=0,
             ),
             ft.Text(
                 spans=[
@@ -148,21 +157,58 @@ def main(page: ft.Page):
                         ),
                     ),
                 ],
+                top=0,
+            ),
+            # Ícone de play/pausa dinâmico
+            ft.Container(
+                content=ft.Icon(
+                    name=(
+                        ft.icons.PLAY_ARROW
+                        if not video_player.playing
+                        else ft.icons.PAUSE
+                    ),
+                    size=80,
+                    color=ft.Colors.WHITE,
+                ),
+                alignment=ft.alignment.center,
+                width=page.width * 0.80,
+                left=2,
+                height=page.window.height,
+                ignore_interactions=True,
             ),
         ]
 
-        # Atualizar largura e posição com os valores atuais
         title.width = page.width * 0.80
         title.alignment = ft.alignment.center
         title.top = page.window.height * 0.07
+        title.height = page.window.height - page.window.height * 0.25
 
-        # Atualizar visibilidade
-        title.visible = e.data == "true"
+        title.visible = bool(video_player.video_path)
+        title.disabled = not title.visible
 
-        # Atualizar a página para refletir as mudanças
         page.update()
 
+    def show_draggable_cursor(e: ft.HoverEvent):
+        """Exibe o título e o ícone ao passar o mouse."""
+        update_overlay()
+
+        # Ajustar opacidade baseado no hover
+        title = next(
+            (item for item in page.overlay if isinstance(item, ft.Stack)), None
+        )
+        if title:
+            title.opacity = 1.0 if e.data == "true" else 0.0
+            page.update()
+
     container_media.on_hover = lambda e: show_draggable_cursor(e)
+
+    def toggle_play_pause(e):
+        video_player.control_pause()
+
+        # Atualizar o overlay para refletir o novo estado do ícone
+        update_overlay()
+
+    container_media.on_click = lambda e: toggle_play_pause(e)
 
     page.add(
         menu_bar,
