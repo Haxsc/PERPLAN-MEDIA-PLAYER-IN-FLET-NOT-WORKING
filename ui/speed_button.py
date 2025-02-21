@@ -2,9 +2,9 @@ import flet as ft
 
 
 def speed_button(video_player):
-    return ft.Container(
+    button_container = ft.Container(
         ft.PopupMenuButton(
-            content=ft.Icon(name=ft.Icons.SPEED, color="#505050"),
+            content=ft.Icon(name=ft.Icons.SPEED),
             items=[
                 ft.PopupMenuItem(
                     text="1x", on_click=lambda _: video_player.set_speed(1)
@@ -39,6 +39,18 @@ def speed_button(video_player):
         height=35,
         margin=ft.margin.only(right=2),
         border_radius=8,
-        bgcolor="white",
+        bgcolor="#191c20",  # Cor padrão
         alignment=ft.alignment.center,
     )
+
+    # Função para aplicar efeito de hover
+    def on_hover(e):
+        if e.data == "true":
+            button_container.bgcolor = "#242a31"  # Cor ao passar o mouse
+        else:
+            button_container.bgcolor = "#191c20"  # Cor padrão ao sair
+        button_container.update()
+
+    button_container.on_hover = on_hover  # Aplica o evento de hover
+
+    return button_container

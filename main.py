@@ -162,9 +162,9 @@ def main(page: ft.Page):
             ft.Container(
                 content=ft.Icon(
                     name=(
-                        ft.icons.PLAY_ARROW
+                        ft.Icons.PLAY_ARROW
                         if not video_player.playing
-                        else ft.icons.PAUSE
+                        else ft.Icons.PAUSE
                     ),
                     size=80,
                     color=ft.Colors.WHITE,
