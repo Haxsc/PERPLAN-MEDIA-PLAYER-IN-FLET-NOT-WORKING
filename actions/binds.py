@@ -34,16 +34,16 @@ def is_window_in_focus(titulo_janela):
                         unlock_key("tab")
                     else:
                         block_key("tab")
-                    # block_key('left')
-                    # block_key('right')
+                    block_key("left")
+                    block_key("right")
                     block_key("up")
                     block_key("down")
                     time.sleep(0.4)
                     window_focus = True
                 else:
                     unlock_key("tab")
-                    # unlock_key('left')
-                    # unlock_key('right')
+                    unlock_key("left")
+                    unlock_key("right")
                     unlock_key("up")
                     unlock_key("down")
                     time.sleep(0.4)
@@ -58,7 +58,7 @@ def is_window_in_focus(titulo_janela):
             window_focus = False
 
 
-def play_pause_action(video_player, play_button):
+def play_pause_action(video_player):
     if binds_enabled:
         video_player.control_pause()
 
@@ -81,7 +81,7 @@ def retroceder_frames(video_player, frames):
         binds_enabled = True
 
 
-def start_binds(video_player, play_button):
+def start_binds(video_player):
     """Inicia os binds, verificando automaticamente o foco da janela."""
     binds = {
         "play_pause": "space",
@@ -90,11 +90,9 @@ def start_binds(video_player, play_button):
     }
 
     actions = {
-        "play_pause": lambda: play_pause_action(video_player, play_button),
-        "avance": lambda: avance_frames(video_player, frames=1),  # Avança 1 frame
-        "retroceder": lambda: retroceder_frames(
-            video_player, frames=1
-        ),  # Retrocede 1 frame
+        "play_pause": lambda: play_pause_action(video_player),
+        "avance": lambda: avance_frames(video_player, frames=1),
+        "retroceder": lambda: retroceder_frames(video_player, frames=1),
     }
 
     def handle_key(event):

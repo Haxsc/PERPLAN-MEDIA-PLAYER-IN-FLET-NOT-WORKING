@@ -101,7 +101,6 @@ def main(page: ft.Page):
 
     ### Title hover
     def update_overlay():
-        """Atualiza o overlay com o título e o ícone de play/pausa."""
         existing_title = next(
             (item for item in page.overlay if isinstance(item, ft.Stack)), None
         )
@@ -231,7 +230,7 @@ def main(page: ft.Page):
     )
     update_container_sizes(container_media, container_contador, image_widget, page)
 
-    start_binds(video_player, play_button)
+    start_binds(video_player)
 
 
 ft.app(target=main)

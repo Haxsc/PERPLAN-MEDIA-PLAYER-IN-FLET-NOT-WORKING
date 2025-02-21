@@ -20,7 +20,7 @@ class VideoPlayer:
         self.total_frames = 0
         self.fps = 0
         self.speed_factor = 1
-        self.buffer = queue.Queue(maxsize=10)  # Buffer maior
+        self.buffer = queue.Queue(maxsize=5)  # Buffer maior
         self.seek_interacting = False
         self.reader_thread = None
         self.playlist = playlist
@@ -91,23 +91,41 @@ class VideoPlayer:
     def start_buffer_thread(self):
         def buffer_frames():
             while self.playing and self.cap.isOpened():
-                print(
-                    f"Buffer Size: {self.buffer.qsize()} / {self.buffer.maxsize}"
-                )  # Exibe o número de frames no buffer
+                buffer_size = self.buffer.qsize()
+                print(f"Buffer Size: {buffer_size} / {self.buffer.maxsize}")
+
                 if not self.buffer.full():
                     ret, frame = self.cap.read()
+
                     if not ret:
+                        print("Fim do vídeo ou erro na leitura do frame.")
                         self.playing = False
                         break
-                    # Pular frames proporcionalmente ao fator de velocidade
+
+                    # Atualiza o número de frames atuais
+                    self.current_frame = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
+
+                    # Se o fator de velocidade for maior que 1, pula frames
                     if self.speed_factor > 1:
                         skip_frames = int(self.speed_factor) - 1
                         for _ in range(skip_frames):
-                            self.cap.read()
-                    self.buffer.put(frame)
-                else:
-                    time.sleep(0.01)
+                            ret, _ = self.cap.read()
+                            if not ret:
+                                break  # Para a leitura se não houver mais frames disponíveis
+                            self.current_frame = int(
+                                self.cap.get(cv2.CAP_PROP_POS_FRAMES)
+                            )
 
+                    # Adiciona o frame ao buffer apenas se houver espaço
+                    try:
+                        self.buffer.put(frame, timeout=0.1)  # Evita bloqueios
+                    except queue.Full:
+                        print("Aviso: Buffer cheio! Frame descartado.")
+
+                else:
+                    time.sleep(0.005)  # Reduz a espera para melhorar a eficiência
+
+        # Inicia a thread de leitura de frames
         self.reader_thread = threading.Thread(target=buffer_frames, daemon=True)
         self.reader_thread.start()
 
@@ -285,17 +303,28 @@ class VideoPlayer:
             print(f"Erro ao exibir o frame: {e}")
 
     def starting_video(self, video_path):
-        self.load_video(video_path)
-        time.sleep(0.1)  # correcao de bug
-        self.play()
-        time.sleep(0.1)  # correcao de bug
-        self.pause()
+        # Carregar o vídeo
+        if not self.load_video(video_path):
+            return  # Se o vídeo não puder ser carregado, pare aqui
+
+        # Definir o frame inicial e exibi-lo
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Posiciona no início do vídeo
+        ret, frame = self.cap.read()  # Lê o primeiro frame
+        if ret:
+            self._display_frame(frame)  # Exibe o frame na interface
+            self.current_frame = 0  # Atualiza a posição atual
+            self.seek_bar.value = 0  # Atualiza a barra de progresso
+            self.seek_bar.update()
+        else:
+            print("Erro ao ler o primeiro frame do vídeo.")
+
+        # Garantir que a interface seja atualizada
+        self.page.update()
 
     def avance_frames(self, frames):
-        print(
-            f"Buffer Size: {self.buffer.qsize()} / {self.buffer.maxsize}"
-        )  # Exibe o número de frames no buffer
-        self.seek(int(self.current_frame + frames))
+        if int(self.current_frame + frames) >= self.seek_bar.max:
+            return
+        self.seek(min(self.seek_bar.max, int(self.current_frame + frames)))
 
     def retroceder_frames(self, frames):
         if int(self.current_frame - frames) <= 0:
@@ -308,6 +337,7 @@ class VideoPlayer:
         self.paused_15 = False
 
         try:
+            self.pause()
             # Obtém o índice atual do vídeo
             current_index = self.playlist.index(self.video_path)
 
@@ -317,20 +347,35 @@ class VideoPlayer:
             # Verifica se o próximo índice está dentro do intervalo
             self.skiped = False
             if next_index < len(self.playlist):
-                self.load_video(self.playlist[next_index])  # Carregar o próximo vídeo
-                self.play()
-                time.sleep(0.1)  # correcao de bug
-                self.pause()
+                # Carregar o próximo vídeo
+                if self.load_video(self.playlist[next_index]):
+                    # Definir e exibir o primeiro frame
+                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ret, frame = self.cap.read()
+                    if ret:
+                        self._display_frame(frame)
+                        self.current_frame = 0
+                        self.seek_bar.value = 0
+                        self.seek_bar.update()
+                    else:
+                        print("Erro ao ler o primeiro frame do próximo vídeo.")
+                else:
+                    print("Erro ao carregar o próximo vídeo.")
             else:
-                print(" Vocé chegou ao fim da playlist.")
+                print("Você chegou ao fim da playlist.")
         except ValueError:
             print("Current video not found in the playlist.")
+
+        # Garantir que a interface seja atualizada
+        self.page.update()
 
     def previous_video(self, e=None):
         self.paused_45 = False
         self.paused_30 = False
         self.paused_15 = False
+
         try:
+            self.pause()
             # Obtém o índice atual do vídeo
             current_index = self.playlist.index(self.video_path)
 
@@ -339,16 +384,25 @@ class VideoPlayer:
 
             # Verifica se o índice do vídeo anterior é válido
             if previous_index >= 0:
-                self.load_video(
-                    self.playlist[previous_index]
-                )  # Carregar o vídeo anterior
-                self.play()
-                time.sleep(0.1)  # correcao de bug
-                self.pause()
+                # Carregar o vídeo anterior
+                if self.load_video(self.playlist[previous_index]):
+                    # Definir e exibir o primeiro frame
+                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ret, frame = self.cap.read()
+                    if ret:
+                        self._display_frame(frame)
+                        self.current_frame = 0
+                        self.seek_bar.value = 0
+                        self.seek_bar.update()
+                    else:
+                        print("Erro ao ler o primeiro frame do vídeo anterior.")
+                else:
+                    print("Erro ao carregar o vídeo anterior.")
             else:
-                print(
-                    "Você já está no primeiro vídeo da playlist."
-                )  # Mensagem para o primeiro vídeo
+                print("Você já está no primeiro vídeo da playlist.")
             self.skiped = False
         except ValueError:
             print("Current video not found in the playlist.")
+
+        # Garantir que a interface seja atualizada
+        self.page.update()
