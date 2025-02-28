@@ -29,6 +29,7 @@ def main(page: ft.Page):
     page.scroll = "none"
     page.window.maximized = True
     playlist = []
+
     ### Block Keys
     check_focus(page)
 
@@ -65,16 +66,17 @@ def main(page: ft.Page):
         controls=[
             ft.TextButton(
                 "Mídia",
-                on_click=lambda e: print("Mídia"),
-                style=ft.ButtonStyle(color="white"),
+                on_click=lambda: print("Mídia"),
+                # style=ft.ButtonStyle(color="white"),
             ),
             ft.TextButton(
                 "Reprodução",
                 on_click=open_playlist,
-                style=ft.ButtonStyle(color="white"),
+                # style=ft.ButtonStyle(color="white"),
             ),
             ft.TextButton(
-                "Ajuda", on_click=open_help, style=ft.ButtonStyle(color="white")
+                "Ajuda",
+                on_click=open_help,  # style=ft.ButtonStyle(color="white")
             ),
         ],
         alignment=ft.MainAxisAlignment.START,

@@ -73,8 +73,18 @@ class VideoPlayer:
         self.cap = cv2.VideoCapture(video_path)
         if not self.cap.isOpened():
             self.hide_loading()
-            snack_bar = ft.SnackBar(ft.Text("Erro ao abrir o vídeo."))
-            self.page.overlay.append(snack_bar)
+            snack_bar = ft.SnackBar(
+                ft.Text(
+                    "Erro ao abrir o vídeo.",
+                    size=16,
+                    weight=ft.FontWeight.BOLD,
+                    color="white",
+                    text_align=ft.TextAlign.CENTER,
+                ),
+                duration=3500,
+                bgcolor="red",
+            )
+            self.page.open(snack_bar)
             self.page.update()
             return False
 
@@ -91,9 +101,6 @@ class VideoPlayer:
     def start_buffer_thread(self):
         def buffer_frames():
             while self.playing and self.cap.isOpened():
-                buffer_size = self.buffer.qsize()
-                print(f"Buffer Size: {buffer_size} / {self.buffer.maxsize}")
-
                 if not self.buffer.full():
                     ret, frame = self.cap.read()
 
@@ -141,7 +148,7 @@ class VideoPlayer:
         self.playing = True
         self.play_button.content = ft.Icon(
             name=ft.Icons.PAUSE,
-            color="#505050",
+            # color="#505050",
         )
         self.play_button.update()
         self.start_buffer_thread()
@@ -161,10 +168,13 @@ class VideoPlayer:
                     sleep_time = max(
                         0, (frame_time / self.speed_factor) - (time.time() - last_time)
                     )
-                    elapsed_time_seconds = self.current_frame / self.fps
 
                     if (
-                        890 <= elapsed_time_seconds < 900 and not self.paused_15
+                        self.current_frame
+                        >= (self.total_frames * (1 / 4) - (self.speed_factor / 2))
+                        and self.current_frame
+                        <= (self.total_frames * (1 / 4) + (self.speed_factor / 2))
+                        and not self.paused_15
                     ):  # 15 minutos
                         self.paused_15 = True
                         self.pause()
@@ -172,7 +182,11 @@ class VideoPlayer:
                             "Pausado automaticamente, Lembre-se de salvar o progresso."
                         )
                     elif (
-                        1790 <= elapsed_time_seconds < 1800 and not self.paused_30
+                        self.current_frame
+                        >= (self.total_frames * (2 / 4) - self.speed_factor)
+                        and self.current_frame
+                        <= (self.total_frames * (2 / 4) + self.speed_factor)
+                        and not self.paused_30
                     ):  # 30 minutos
                         self.paused_30 = True
                         self.pause()
@@ -180,14 +194,21 @@ class VideoPlayer:
                             "Pausado automaticamente, Lembre-se de salvar o progresso."
                         )
                     elif (
-                        2690 <= elapsed_time_seconds < 2700 and not self.paused_45
+                        self.current_frame
+                        >= (self.total_frames * (3 / 4) - self.speed_factor)
+                        and self.current_frame
+                        <= (self.total_frames * (3 / 4) + self.speed_factor)
+                        and not self.paused_45
                     ):  # 45 minutos
                         self.paused_45 = True
                         self.pause()
                         self.show_pause_message(
                             "Pausado automaticamente, Lembre-se de salvar o progresso."
                         )
-                    elif elapsed_time_seconds >= 2750 and self.paused_45:
+                    elif (
+                        self.current_frame >= (self.total_frames * (3 / 4) + 100)
+                        and self.paused_45
+                    ):
                         self.paused_45 = False
                         self.paused_30 = False
                         self.paused_15 = False
@@ -211,25 +232,26 @@ class VideoPlayer:
         threading.Thread(target=playback_thread, daemon=True).start()
 
     def show_pause_message(self, message):
-        self.page.snack_bar = ft.SnackBar(
-            ft.Text(
-                message,
-                size=16,
-                weight=ft.FontWeight.BOLD,
-                color="white",
-                text_align=ft.TextAlign.CENTER,
-            ),
-            bgcolor="orange",
-            duration=3500,
+        self.page.open(
+            ft.SnackBar(
+                content=ft.Text(
+                    message,
+                    size=16,
+                    weight=ft.FontWeight.BOLD,
+                    color="white",
+                    text_align=ft.TextAlign.CENTER,
+                ),
+                bgcolor="orange",
+                duration=3500,
+            )
         )
-        self.page.snack_bar.open = True
         self.page.update()
 
     def pause(self, event=None):
         self.playing = False
         self.play_button.content = ft.Icon(
             name=ft.Icons.PLAY_ARROW,
-            color="#505050",
+            # color="#505050",
         )
         self.play_button.update()
         if self.reader_thread and self.reader_thread.is_alive():
